@@ -401,7 +401,7 @@ function renderLaunchesGrid(launchesList) {
           imageUrl
             ? `
         <div class="relative h-48 overflow-hidden bg-slate-900/50">
-            <img src="${imageUrl}" alt="${launch.name}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" onerror="this.onerror=null; this.src='./assets/images/placeholder.webp';" />
+            <img src="${imageUrl}" alt="${launch.name}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" onerror="this.onerror=null; this.src='./assets/images/launch-placeholder.png';" />
             <div class="absolute top-3 right-3">
                 <span class="px-3 py-1 bg-${statusColor}-500/90 text-white backdrop-blur-sm rounded-full text-xs font-semibold shadow-lg">
                     ${statusAbbrev}
@@ -466,3 +466,110 @@ function renderLaunchesGrid(launchesList) {
     launchesGrid.innerHTML += cardHTML;
   }
 }
+
+// PLANETS
+const PLANETS_API_URL =
+  "https://solar-system-opendata-proxy.vercel.app/api/planets";
+const planetComparisonBody = document.getElementById("planet-comparison-tbody");
+
+const planetColors = {
+  mercury: "#6b7280",
+  venus: "#fb923c",
+  earth: "#3b82f6",
+  mars: "#ef4444",
+  jupiter: "#fdba74",
+  saturn: "#fde047",
+  uranus: "#22d3ee",
+  neptune: "#2563eb",
+};
+
+async function planetsData() {
+  try {
+    const res = await fetch(PLANETS_API_URL);
+    let data = await res.json();
+
+    const planets = data.bodies ? data.bodies : data;
+    const majorPlanets = planets
+      .filter((body) => body.isPlanet)
+      .sort((a, b) => a.semimajorAxis - b.semimajorAxis);
+
+    renderPlanetTable(majorPlanets);
+  } catch (error) {
+    console.error("Error fetching planets:", error);
+  }
+}
+
+function renderPlanetTable(planets) {
+  planetComparisonBody.innerHTML = "";
+
+  for (let i = 0; i < planets.length; i++) {
+    const planet = planets[i];
+    const name = planet.englishName;
+    const color = planetColors[name] || "#ffffff";
+
+    const distanceAU = (planet.semimajorAxis / 149597870).toFixed(2);
+
+    const diameter = (planet.meanRadius * 2).toLocaleString();
+
+    let earthMass = 1;
+    if (planet.mass) {
+      const planetMassVal =
+        planet.mass.massValue * Math.pow(10, planet.mass.massExponent);
+      const earthMassVal = 5.9722 * Math.pow(10, 24);
+      earthMass = (planetMassVal / earthMassVal).toFixed(3);
+    }
+
+    let orbitalPeriod = Math.abs(planet.sideralOrbit).toFixed(1) + " days";
+    if (Math.abs(planet.sideralOrbit) > 365) {
+      orbitalPeriod =
+        (Math.abs(planet.sideralOrbit) / 365.25).toFixed(1) + " years";
+    }
+
+    const moonsCount = planet.moons ? planet.moons.length : 0;
+
+    let planetType = "Terrestrial";
+    let typeColor = "bg-orange-500/50 text-orange-200";
+
+    if (name === "Earth") {
+      typeColor = "bg-blue-500/50 text-blue-200";
+    } else if (name === "Jupiter" || name === "Saturn") {
+      planetType = "Gas Giant";
+      typeColor =
+        name === "Jupiter"
+          ? "bg-purple-500/50 text-purple-200"
+          : "bg-yellow-500/50 text-yellow-200";
+    } else if (name === "Uranus" || name === "Neptune") {
+      planetType = "Ice Giant";
+      typeColor =
+        name === "Uranus"
+          ? "bg-cyan-500/50 text-cyan-200"
+          : "bg-blue-500/50 text-blue-200";
+    }
+
+    const activeRowClass = name === "Earth" ? "bg-blue-500/5" : "";
+
+    const tr = document.createElement("tr");
+    tr.className = `hover:bg-slate-800/30 transition-colors ${activeRowClass}`;
+
+    tr.innerHTML = `
+      <td class="px-4 md:px-6 py-3 md:py-4 sticky left-0 bg-slate-800 z-10">
+        <div class="flex items-center space-x-2 md:space-x-3">
+          <div class="w-6 h-6 md:w-8 md:h-8 rounded-full flex-shrink-0" style="background-color: ${color}"></div>
+          <span class="font-semibold text-sm md:text-base whitespace-nowrap">${name}</span>
+        </div>
+      </td>
+      <td class="px-4 md:px-6 py-3 md:py-4 text-slate-300 text-sm md:text-base whitespace-nowrap">${distanceAU}</td>
+      <td class="px-4 md:px-6 py-3 md:py-4 text-slate-300 text-sm md:text-base whitespace-nowrap">${diameter}</td>
+      <td class="px-4 md:px-6 py-3 md:py-4 text-slate-300 text-sm md:text-base whitespace-nowrap">${earthMass}</td>
+      <td class="px-4 md:px-6 py-3 md:py-4 text-slate-300 text-sm md:text-base whitespace-nowrap">${orbitalPeriod}</td>
+      <td class="px-4 md:px-6 py-3 md:py-4 text-slate-300 text-sm md:text-base whitespace-nowrap">${moonsCount}</td>
+      <td class="px-4 md:px-6 py-3 md:py-4 whitespace-nowrap">
+        <span class="px-2 py-1 rounded text-xs ${typeColor}">${planetType}</span>
+      </td>
+    `;
+
+    planetComparisonBody.appendChild(tr);
+  }
+}
+
+planetsData();
