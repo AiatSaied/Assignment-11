@@ -199,8 +199,9 @@ async function launchesData() {
 
     if (launches.length > 0) {
       renderFeaturedLaunch(launches[0]);
+      const remainingLaunches = launches.slice(1, 10);
+      renderLaunchesGrid(remainingLaunches);
     }
-
     console.log(launches);
   } catch (error) {
     console.error("Error fetching launches:", error);
@@ -209,7 +210,6 @@ async function launchesData() {
 
 launchesData();
 
-// 4. Update the Featured Launch (The big card at the top)
 function renderFeaturedLaunch(launch) {
   const formatDate = new Date(launch.net);
   const launchDate = formatDate.toLocaleDateString("en-US", {
@@ -218,15 +218,16 @@ function renderFeaturedLaunch(launch) {
     month: "long",
     day: "numeric",
   });
-  const launchTime = formatDate.toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "UTC",
-  });
+  const launchTime =
+    formatDate.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "UTC",
+    }) + " UTC";
 
   const today = new Date();
   const timeDifference = formatDate.getTime() - today.getTime();
-  // Convert milliseconds into days and round up to the nearest whole number
+
   const numDays = Math.ceil(timeDifference / (1000 * 60 * 60 * 24));
 
   const providerName = launch.launch_service_provider
@@ -247,9 +248,7 @@ function renderFeaturedLaunch(launch) {
     ? launch.mission.description
     : "Mission details will be available closer to launch date.";
 
-  const imageUrl = launch.image
-    ? launch.image.image_url
-    : "./assets/images/placeholder.webp";
+  const imageUrl = launch.image ? launch.image.image_url : null;
 
   const color = {
     Go: "green",
@@ -258,7 +257,7 @@ function renderFeaturedLaunch(launch) {
     Hold: "red",
     TBC: "yellow",
   };
-  const statusColor = color[launch.status.abbrev] || "slate";
+  const statusColor = color[launch.status?.abbrev] || "slate";
 
   const rocket = launch.rocket
     ? launch.rocket.configuration.name
@@ -275,7 +274,7 @@ function renderFeaturedLaunch(launch) {
                 <i class="fas fa-star"></i> Featured Launch
               </span>
               <span class="px-4 py-1.5 bg-${statusColor}-500/20 text-${statusColor}-400 rounded-full text-sm font-semibold">
-                ${launch.status.abbrev}
+                ${launch.status?.abbrev || "TBD"}
               </span>
             </div>
             
@@ -355,4 +354,115 @@ function renderFeaturedLaunch(launch) {
       </div>
     </div>
   `;
+}
+
+function renderLaunchesGrid(launchesList) {
+  launchesGrid.innerHTML = "";
+
+  for (let i = 0; i < launchesList.length; i++) {
+    const launch = launchesList[i];
+
+    const formatDate = new Date(launch.net);
+    const launchDate = formatDate.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+
+    const launchTime =
+      formatDate.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: "UTC",
+      }) + " UTC";
+
+    const color = {
+      Go: "green",
+      Success: "green",
+      TBD: "yellow",
+      Hold: "red",
+      TBC: "yellow",
+    };
+    const statusColor = color[launch.status.abbrev] || "slate";
+
+    const providerName = launch.launch_service_provider
+      ? launch.launch_service_provider.name
+      : "Unknown Provider";
+
+    const imageUrl = launch.image ? launch.image.thumbnail_url : null;
+
+    const locationName = launch.pad?.location?.name || "Unknown Location";
+    const rocketName = launch.rocket?.configuration?.name || "N/A";
+    const statusAbbrev = launch.status?.abbrev || "TBD";
+
+    const cardHTML = `
+      <div class="bg-slate-800/50 border border-slate-700 rounded-2xl overflow-hidden hover:border-blue-500/30 transition-all group cursor-pointer flex flex-col">
+        ${
+          imageUrl
+            ? `
+        <div class="relative h-48 overflow-hidden bg-slate-900/50">
+            <img src="${imageUrl}" alt="${launch.name}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" onerror="this.onerror=null; this.src='./assets/images/placeholder.webp';" />
+            <div class="absolute top-3 right-3">
+                <span class="px-3 py-1 bg-${statusColor}-500/90 text-white backdrop-blur-sm rounded-full text-xs font-semibold shadow-lg">
+                    ${statusAbbrev}
+                </span>
+            </div>
+        </div>
+        `
+            : `
+        <div class="relative h-48 bg-slate-900/50 flex items-center justify-center">
+            <i class="fas fa-rocket text-5xl text-slate-700"></i>
+            <div class="absolute top-3 right-3">
+                <span class="px-3 py-1 bg-${statusColor}-500/90 text-white backdrop-blur-sm rounded-full text-xs font-semibold shadow-lg">
+                    ${statusAbbrev}
+                </span>
+            </div>
+        </div>
+        `
+        }
+        
+        <div class="p-5 flex flex-col flex-1">
+            <div class="mb-3">
+                <h4 class="font-bold text-lg mb-2 line-clamp-2 group-hover:text-blue-400 transition-colors">
+                    ${launch.name}
+                </h4>
+                <p class="text-sm text-slate-400 flex items-center gap-2">
+                    <i class="fas fa-building text-xs"></i>
+                    ${providerName}
+                </p>
+            </div>
+            
+            <div class="space-y-2 mb-4 flex-1">
+                <div class="flex items-center gap-2 text-sm">
+                    <i class="fas fa-calendar text-slate-500 w-4 text-center"></i>
+                    <span class="text-slate-300">${launchDate}</span>
+                </div>
+                <div class="flex items-center gap-2 text-sm">
+                    <i class="fas fa-clock text-slate-500 w-4 text-center"></i>
+                    <span class="text-slate-300">${launchTime}</span>
+                </div>
+                <div class="flex items-center gap-2 text-sm">
+                    <i class="fas fa-rocket text-slate-500 w-4 text-center"></i>
+                    <span class="text-slate-300">${rocketName}</span>
+                </div>
+                <div class="flex items-center gap-2 text-sm">
+                    <i class="fas fa-map-marker-alt text-slate-500 w-4 text-center"></i>
+                    <span class="text-slate-300 line-clamp-1">${locationName}</span>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-2 pt-4 border-t border-slate-700">
+                <button class="flex-1 px-4 py-2 bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors text-sm font-semibold">
+                    Details
+                </button>
+                <button class="px-3 py-2 bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors">
+                    <i class="far fa-heart"></i>
+                </button>
+            </div>
+        </div>
+      </div>
+    `;
+
+    launchesGrid.innerHTML += cardHTML;
+  }
 }
